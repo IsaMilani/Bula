@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bula — simulador de teses do varejo farmacêutico</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#0E8A5F">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Bula">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EDF2F0; --paper:#FFFFFF; --ink:#12302B; --ink2:#4B6660; --line:#CFDAD6; --soft:#E2EAE7;
+  --green:#0E8A5F; --greenSoft:#D5EEE4; --bad:#C2412F; --badSoft:#F7DCD6; --warn:#B7791F;
+  --rd:#2B59C3; --pm:#D9483B; --pv:#B8860B;
+  --display:"Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --body:"Instrument Sans", "Helvetica Neue", Arial, system-ui, sans-serif;
+  color-scheme: light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F1D1A; --paper:#162925; --ink:#E4EFEB; --ink2:#9DB5AE; --line:#2C4540; --soft:#1D332E;
+    --green:#3CC28E; --greenSoft:#1C3B30; --bad:#F07A66; --badSoft:#3E2420; --warn:#E3AE57;
+    --rd:#7FA2F2; --pm:#F08174; --pv:#E0B54A; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F1D1A; --paper:#162925; --ink:#E4EFEB; --ink2:#9DB5AE; --line:#2C4540; --soft:#1D332E;
+  --green:#3CC28E; --greenSoft:#1C3B30; --bad:#F07A66; --badSoft:#3E2420; --warn:#E3AE57;
+  --rd:#7FA2F2; --pm:#F08174; --pv:#E0B54A; color-scheme: dark;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:calc(env(safe-area-inset-top,0px) + 150px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--paper)}
+.num{font-variant-numeric:tabular-nums}
+.wrap{max-width:1180px;margin:0 auto;padding:0 20px}
+
+/* Hero */
+.hero{padding:44px 0 26px}
+.brand{display:flex;align-items:center;gap:14px;margin-bottom:10px}
+.capsule{width:58px;height:24px;border-radius:12px;background:linear-gradient(90deg,var(--green) 50%,var(--paper) 50%);border:2px solid var(--green);flex:none}
+.hero h1{font-family:var(--display);font-weight:800;font-size:clamp(46px,8vw,92px);line-height:.95;letter-spacing:-.03em;margin:0}
+.hero p.lead{font-size:clamp(17px,2vw,20px);max-width:62ch;color:var(--ink2);margin:16px 0 0}
+.hero .who{margin-top:14px;font-size:14px;color:var(--ink2)}
+
+/* Scenario bar */
+.panel{position:sticky;top:0;z-index:20;background:var(--paper);border-bottom:1px solid var(--line);padding-top:env(safe-area-inset-top,0px);margin-top:calc(-1 * env(safe-area-inset-top,0px))}
+.panel .wrap{padding-top:12px;padding-bottom:12px}
+.presets{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
+.presets span{font-weight:600;font-size:14px;margin-right:4px}
+.chip{font:inherit;font-size:13.5px;border:1px solid var(--line);background:var(--bg);color:var(--ink);padding:5px 12px;border-radius:999px;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.chip:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--green);outline-offset:2px}
+.sliders{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px}
+.sl label{display:flex;justify-content:space-between;font-size:13px;color:var(--ink2);gap:6px}
+.sl label b{color:var(--ink);font-weight:600}
+input[type=range]{width:100%;accent-color:var(--green)}
+.toggle{font:inherit;font-size:13px;background:none;border:0;color:var(--green);cursor:pointer;padding:4px 0;display:none}
+@media (max-width:860px){
+  .sliders{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .toggle{display:inline-block}
+  .panel.collapsed .sliders{display:none}
+}
+
+/* Verdict strip */
+.verdict{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:26px 0 10px}
+.vc{background:var(--paper);border-radius:6px;padding:16px 18px;border-top:5px solid var(--c)}
+.vc h3{margin:0;font-family:var(--display);font-size:20px;font-weight:600}
+.vc .tk{font-size:13px;color:var(--ink2)}
+.vc .big{font-family:var(--display);font-weight:800;font-size:38px;line-height:1.05;margin-top:8px}
+.vc .sub{font-size:13.5px;color:var(--ink2)}
+.vc .pill{display:inline-block;margin-top:8px;font-size:12.5px;font-weight:600;padding:2px 10px;border-radius:999px}
+.up{color:var(--green)} .down{color:var(--bad)}
+.pill.up{background:var(--greenSoft)} .pill.down{background:var(--badSoft)} .pill.flat{background:var(--soft);color:var(--ink2)}
+@media (max-width:760px){.verdict{grid-template-columns:1fr}}
+
+/* Sections as leaflet */
+.sec{background:var(--paper);border-radius:6px;margin:22px 0;padding:28px clamp(18px,3vw,36px)}
+.sec-head{display:grid;grid-template-columns:auto 1fr;gap:4px 18px;align-items:baseline;border-bottom:1px solid var(--line);padding-bottom:14px;margin-bottom:20px}
+.sec-n{font-family:var(--display);font-weight:800;font-size:44px;line-height:1;color:var(--green);grid-row:span 2}
+.sec-head h2{font-family:var(--display);font-weight:600;font-size:clamp(24px,3vw,32px);margin:0;line-height:1.1}
+.sec-head p{margin:0;color:var(--ink2);font-size:15px}
+.grid2{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:28px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+@media (max-width:860px){.grid2,.grid3{grid-template-columns:1fr}}
+.read{background:var(--soft);border-left:4px solid var(--green);padding:14px 16px;border-radius:0 6px 6px 0;font-size:15px}
+.read h4{margin:0 0 6px;font-size:14px;color:var(--green)}
+.read p{margin:0 0 8px} .read p:last-child{margin:0}
+.muted{color:var(--ink2);font-size:13.5px}
+h4.t{font-family:var(--display);font-size:18px;font-weight:600;margin:0 0 10px}
+
+.tbl-wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14.5px}
+th,td{padding:8px 10px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+thead th{font-weight:600;color:var(--ink2);font-size:13px}
+td input{width:96px;font:inherit;text-align:right;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:4px;padding:3px 6px}
+.co-dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--c);margin-right:7px;vertical-align:baseline}
+tr.est td:first-child::after{content:" *";color:var(--warn)}
+
+.kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.kpi{border:1px solid var(--line);border-radius:6px;padding:12px 14px}
+.kpi .h{font-size:13px;color:var(--ink2)}
+.kpi .row{display:flex;justify-content:space-between;font-size:14px;padding:2px 0}
+.kpi .row b{font-variant-numeric:tabular-nums}
+@media (max-width:760px){.kpis{grid-template-columns:1fr}}
+
+svg text{font-family:var(--body);fill:var(--ink2);font-size:12px}
+.chart{width:100%;position:relative}
+.tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--paper);font-size:12.5px;padding:6px 9px;border-radius:4px;white-space:nowrap;opacity:0;transition:opacity .12s;z-index:5}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:13.5px;margin:6px 0}
+
+.levers{display:grid;gap:8px}
+.lever{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:start;border:1px solid var(--line);border-radius:6px;padding:10px 12px;cursor:pointer}
+.lever input{margin-top:4px;accent-color:var(--green)}
+.lever b{display:block;font-size:14.5px}
+.lever span{font-size:13px;color:var(--ink2)}
+.lever em{font-style:normal;font-size:13px;font-weight:600;color:var(--green)}
+
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.heat{display:grid;gap:3px;font-size:12.5px}
+.heat div{padding:8px 4px;text-align:center;border-radius:3px;font-variant-numeric:tabular-nums}
+.heat .hd{background:none;color:var(--ink2);font-weight:600}
+.heat .cur{outline:2.5px solid var(--ink);outline-offset:-2px}
+
+.timeline{list-style:none;margin:0;padding:0;border-left:2px solid var(--line)}
+.timeline li{position:relative;padding:0 0 14px 18px;font-size:14.5px}
+.timeline li::before{content:"";position:absolute;left:-7px;top:6px;width:12px;height:12px;border-radius:50%;background:var(--paper);border:2px solid var(--green)}
+.timeline time{display:block;font-weight:600;font-size:13px;color:var(--green)}
+
+.swot{display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:14px}
+.swot div{border-radius:6px;padding:10px 12px;background:var(--soft)}
+.swot h5{margin:0 0 4px;font-size:13px}
+.swot ul{margin:0;padding-left:18px}
+.thesis{border:2px solid var(--c);border-radius:8px;padding:18px}
+.thesis .rank{font-family:var(--display);font-weight:800;font-size:15px;color:var(--c)}
+.thesis h3{font-family:var(--display);font-size:24px;margin:2px 0 8px}
+.thesis ul{padding-left:18px;margin:8px 0 0;font-size:14.5px}
+footer{padding:20px 0 60px;font-size:13.5px;color:var(--ink2)}
+footer a{color:var(--green)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
+/* App: barra inferior e instalação */
+.appnav{display:none}
+.install{display:none;font:inherit;font-size:14px;font-weight:600;background:var(--green);color:#fff;border:0;border-radius:999px;padding:8px 16px;cursor:pointer;margin-top:16px}
+.install.show{display:inline-block}
+.ios-hint{display:none;font-size:13.5px;color:var(--ink2);margin-top:12px;max-width:52ch}
+.ios-hint.show{display:block}
+@media (max-width:860px){
+  body{padding-bottom:calc(64px + env(safe-area-inset-bottom,0px))}
+  .appnav{display:grid;grid-template-columns:repeat(5,1fr);position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--paper);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
+  .appnav a{display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 2px 9px;font-size:11.5px;color:var(--ink2);text-decoration:none}
+  .appnav a b{font-family:var(--display);font-size:17px;color:var(--ink);line-height:1}
+  .appnav a.on b,.appnav a.on{color:var(--green)}
+  .panel{top:0}
+}
+@media (display-mode: standalone){ .hero{padding-top:20px} }
+</style>
+</head>
+<body>
+
+<header class="wrap hero">
+  <div class="brand"><div class="capsule" aria-hidden="true"></div><span class="muted">Ferramenta de análise para mesas de crédito e research</span></div>
+  <h1>Bula</h1>
+  <p class="lead">Um simulador que lê o varejo farmacêutico brasileiro como uma bula de remédio: composição, mecanismo de ação, posologia, interações e superdosagem. Mexa nos cenários e veja, em tempo real, o que acontece com lucro, ROE, alavancagem e preço justo de RD Saúde, Pague Menos e Panvel.</p>
+  <button class="install" id="install">Instalar o app</button>
+  <p class="ios-hint" id="ios-hint">No iPhone: toque em Compartilhar e depois em “Adicionar à Tela de Início” para instalar.</p>
+  <p class="who">Dados dos últimos 12 meses até o 2T26 (balanços divulgados em agosto de 2026) e cotações de outubro de 2026. Valores em R$ milhões, salvo indicação.</p>
+</header>
+
+<div class="panel" id="panel">
+  <div class="wrap">
+    <div class="presets" role="group" aria-label="Cenários prontos">
+      <span>Cenário</span>
+      <button class="chip" data-preset="base" aria-pressed="true">Base</button>
+      <button class="chip" data-preset="bull">Juros caindo + genérico</button>
+      <button class="chip" data-preset="bear">Recessão</button>
+      <button class="chip" data-preset="price">Guerra de preços</button>
+      <button class="toggle" id="toggle" aria-expanded="true">Ocultar controles</button>
+    </div>
+    <div class="sliders">
+      <div class="sl"><label for="s-sales">Vendas vs. base <b id="v-sales" class="num"></b></label><input type="range" id="s-sales" min="-20" max="20" step="1" value="0"></div>
+      <div class="sl"><label for="s-gm">Margem bruta <b id="v-gm" class="num"></b></label><input type="range" id="s-gm" min="-150" max="150" step="10" value="0"></div>
+      <div class="sl"><label for="s-selic">Selic <b id="v-selic" class="num"></b></label><input type="range" id="s-selic" min="9" max="17" step="0.25" value="13.75"></div>
+      <div class="sl"><label for="s-glp">Adoção GLP-1 genérico <b id="v-glp" class="num"></b></label><input type="range" id="s-glp" min="0" max="80" step="5" value="0"></div>
+      <div class="sl"><label for="s-eff">Corte de despesas <b id="v-eff" class="num"></b></label><input type="range" id="s-eff" min="0" max="150" step="10" value="0"></div>
+    </div>
+  </div>
+</div>
+
+<main class="wrap">
+
+  <section class="verdict" id="verdict" aria-label="Resumo do cenário"></section>
+  <p class="muted" id="verdict-note"></p>
+
+  <!-- 1 -->
+  <section class="sec" id="composicao">
+    <div class="sec-head"><div class="sec-n">1</div><h2>Composição</h2><p>Os dados de entrada. Tudo é editável: atualize com o ITR mais recente e a ferramenta recalcula sozinha.</p></div>
+    <div class="tbl-wrap"><table id="t-data" class="num"></table></div>
+    <p class="muted" style="margin-top:10px">* Estimativa da equipe (ativo total, PL, D&A e divisão fixo/variável) a partir de múltiplos de mercado e releases; os demais números vêm dos releases do 2T26 e de cotações de outubro de 2026. <button class="chip" id="reset">Restaurar dados originais</button></p>
+  </section>
+
+  <!-- 2 -->
+  <section class="sec" id="alavancagem">
+    <div class="sec-head"><div class="sec-n">2</div><h2>Mecanismo de ação: alavancagem operacional e financeira</h2><p>Como cada 1% de variação nas vendas chega amplificado ao lucro, e quanto espaço existe antes do prejuízo.</p></div>
+    <div class="grid2">
+      <div>
+        <h4 class="t">Variação do lucro líquido para cada variação de vendas</h4>
+        <div class="legend" id="leg1"></div>
+        <div class="chart" id="c-lev"></div>
+        <label class="muted" for="s-fixed" style="display:block;margin-top:10px">Parcela fixa das despesas operacionais: <b id="v-fixed"></b></label>
+        <input type="range" id="s-fixed" min="40" max="85" step="5" value="65">
+      </div>
+      <div class="read" id="r-lev"></div>
+    </div>
+    <h4 class="t" style="margin-top:24px">Termômetro de risco</h4>
+    <div class="kpis" id="k-lev"></div>
+  </section>
+
+  <!-- 3 -->
+  <section class="sec" id="dupont">
+    <div class="sec-head"><div class="sec-n">3</div><h2>Princípio ativo do ROE (DuPont)</h2><p>ROE = margem líquida × giro do ativo × multiplicador do PL. Qual alavanca explica o retorno de cada acionista?</p></div>
+    <div class="grid2">
+      <div>
+        <div class="tbl-wrap"><table id="t-dupont" class="num"></table></div>
+        <h4 class="t" style="margin-top:22px">De onde vem a diferença de ROE em relação à RD (p.p.)</h4>
+        <div class="chart" id="c-dup"></div>
+      </div>
+      <div class="read" id="r-dup"></div>
+    </div>
+  </section>
+
+  <!-- 4 -->
+  <section class="sec" id="custos">
+    <div class="sec-head"><div class="sec-n">4</div><h2>Posologia: custos, performance e oportunidades</h2><p>Para onde vai cada R$ 100 de venda, e quanto vale cada melhoria em lucro e em reais por ação.</p></div>
+    <div class="grid2">
+      <div>
+        <h4 class="t">Destino de cada R$ 100 de receita bruta (cenário atual)</h4>
+        <div class="legend" id="leg-cost"></div>
+        <div class="chart" id="c-cost"></div>
+        <h4 class="t" style="margin-top:20px">Performance recente (2T26 vs. 2T25)</h4>
+        <div class="tbl-wrap"><table id="t-perf" class="num"></table></div>
+      </div>
+      <div>
+        <h4 class="t">Alavancas de melhoria</h4>
+        <p class="muted" style="margin-top:-4px">Marque para somar ao cenário. O impacto aparece em todas as seções.</p>
+        <div class="levers" id="levers"></div>
+        <div class="tbl-wrap" style="margin-top:14px"><table id="t-lever" class="num"></table></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5 -->
+  <section class="sec" id="valuation">
+    <div class="sec-head"><div class="sec-n">5</div><h2>Preço: valuation por EV/EBITDA</h2><p>Quanto o mercado paga por cada real de EBITDA, e se esse preço faz sentido diante de retorno, crescimento e risco.</p></div>
+    <div class="grid2">
+      <div>
+        <div class="legend"><span>Barras: EV/EBITDA atual</span><span>Losango: EV/EBITDA se o preço não mudar e o cenário se confirmar</span></div>
+        <div class="chart" id="c-ev"></div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:14px 0 8px">
+          <label for="sel-mult" style="font-weight:600;font-size:14px">Múltiplo-alvo</label>
+          <select id="sel-mult" style="font:inherit;padding:5px 8px;border-radius:4px;border:1px solid var(--line);background:var(--bg);color:var(--ink)">
+            <option value="own">Manter o múltiplo atual de cada empresa</option>
+            <option value="avg">Média do setor</option>
+            <option value="roe">Múltiplo justo pelo ROE (regressão do setor)</option>
+          </select>
+        </div>
+        <div class="tbl-wrap"><table id="t-ev" class="num"></table></div>
+      </div>
+      <div class="read" id="r-ev"></div>
+    </div>
+  </section>
+
+  <!-- 6 -->
+  <section class="sec" id="mercado">
+    <div class="sec-head"><div class="sec-n">6</div><h2>Interações: mercado, concorrência e estratégia</h2><p>O que está mudando no setor e como cada rede está posicionada para isso.</p></div>
+    <div class="tbl-wrap"><table id="t-mkt" class="num"></table></div>
+    <div class="grid2" style="margin-top:24px">
+      <div>
+        <h4 class="t">Linha do tempo de 2026</h4>
+        <ol class="timeline" id="tl"></ol>
+      </div>
+      <div>
+        <h4 class="t">Oportunidades e ameaças</h4>
+        <div class="tabs" id="tab-swot"></div>
+        <div class="swot" id="swot"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section class="sec" id="stress">
+    <div class="sec-head"><div class="sec-n">7</div><h2>Superdosagem: teste de estresse</h2><p>Variação do lucro líquido contra o lucro atual, cruzando vendas e Selic (demais controles como estão no painel).</p></div>
+    <div class="tabs" id="tab-heat"></div>
+    <div class="tbl-wrap"><div class="heat" id="heat"></div></div>
+    <p class="muted" style="margin-top:10px">A célula com contorno é o cenário selecionado no painel. Verde: lucro maior que o atual. Vermelho: lucro menor; “prej.” indica prejuízo.</p>
+  </section>
+
+  <!-- 8 -->
+  <section class="sec" id="tese">
+    <div class="sec-head"><div class="sec-n">8</div><h2>Indicação: a tese de investimento</h2><p>Nossa leitura final, que se ajusta ao cenário escolhido no painel.</p></div>
+    <div class="grid3" id="theses"></div>
+    <div class="read" style="margin-top:20px" id="r-final"></div>
+  </section>
+
+</main>
+
+<nav class="appnav" aria-label="Seções">
+  <a href="#verdict"><b>R$</b>Cenário</a>
+  <a href="#alavancagem"><b>2</b>Alavanc.</a>
+  <a href="#dupont"><b>3</b>DuPont</a>
+  <a href="#valuation"><b>5</b>Preço</a>
+  <a href="#tese"><b>8</b>Tese</a>
+</nav>
+
+<footer class="wrap">
+  <p><b>Fontes.</b> Releases e coberturas de resultados do 2T26 (RD Saúde, Pague Menos, Panvel, publicados em 3 a 6 de agosto de 2026), Banco Central (Copom de 16 de setembro de 2026, Selic 13,75%), cotações de outubro de 2026 (Investidor10, Dados de Mercado, investimentos.com.br) e notícias setoriais sobre semaglutida (Anvisa/EMS, JP Morgan, BTG, Futuro da Saúde). EBITDA ajustado sem IFRS 16, como cada companhia divulga. Margens de GLP-1 (marca cerca de 12%, genérico cerca de 27%) seguem estimativas de mercado.</p>
+  <p><b>Limitações.</b> Ferramenta acadêmica, não é recomendação de investimento. Dados de 12 meses foram reconstruídos a partir de trimestres e alavancagem divulgados; confira e substitua pelos números do ITR na seção 1.</p>
+</footer>
+
+<script>
+(function(){
+"use strict";
+var BASE = {
+  rd:{name:"RD Saúde",tk:"RADL3",c:"--rd",rev:50300,netRatio:0.895,gm:0.275,ebitda:3750,fixedShare:0.65,da:1200,fin:-800,tax:0.229,nd:3000,equity:7350,assets:27000,shares:1752,price:21.28,glp:0.11,g26:{rev:18.3,ebitda:17.9,ni:23.4}},
+  pm:{name:"Pague Menos",tk:"PGMN3",c:"--pm",rev:16800,netRatio:0.92,gm:0.30,ebitda:997,fixedShare:0.65,da:280,fin:-296,tax:0.19,nd:1803,equity:3400,assets:11000,shares:724,price:5.69,glp:0.082,g26:{rev:9.3,ebitda:15.4,ni:22.2}},
+  pv:{name:"Panvel",tk:"PNVL3",c:"--pv",rev:6450,netRatio:0.923,gm:0.302,ebitda:335,fixedShare:0.65,da:120,fin:-45,tax:0.194,nd:305,equity:1310,assets:3800,shares:150,price:15.46,glp:0.085,g26:{rev:15.7,ebitda:26.4,ni:39.1}}
+};
+var IDS=["rd","pm","pv"];
+var GLP_BRAND=0.12, GLP_GEN=0.27, GLP_PRICE=0.45, GLP_VOL=2.0, SELIC0=13.75;
+var D = JSON.parse(JSON.stringify(BASE));
+try{var saved=localStorage.getItem("bula-data"); if(saved){var s=JSON.parse(saved); IDS.forEach(function(k){ if(s[k]) Object.assign(D[k],s[k]); });}}catch(e){}
+
+var S={sales:0,gm:0,selic:13.75,glp:0,eff:0,fixed:65,levers:{},mult:"own",heat:"rd",swot:"rd"};
+var PRESETS={
+  base:{sales:0,gm:0,selic:13.75,glp:0,eff:0},
+  bull:{sales:6,gm:30,selic:11,glp:50,eff:30},
+  bear:{sales:-5,gm:-30,selic:15.5,glp:10,eff:0},
+  price:{sales:2,gm:-120,selic:13.75,glp:60,eff:0}
+};
+var LEVERS=[
+  {id:"own",t:"Marca própria +1 p.p. de participação",d:"Produtos próprios têm margem bruta maior; estimamos +15 bps na margem bruta.",gm:15},
+  {id:"ga",t:"Diluição de despesas administrativas",d:"Centro de serviços e automação: −30 bps de despesas sobre a receita.",eff:30},
+  {id:"dig",t:"Digital via app com retirada em loja",d:"Menos frete e comissão de marketplace: −15 bps de despesas variáveis.",eff:15},
+  {id:"debt",t:"Refinanciar a dívida 1 p.p. mais barata",d:"Troca de debêntures caras por novas emissões com spread menor.",spread:1}
+];
+
+function cssv(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim();}
+var fmt0=new Intl.NumberFormat("pt-BR",{maximumFractionDigits:0});
+var fmt1=new Intl.NumberFormat("pt-BR",{minimumFractionDigits:1,maximumFractionDigits:1});
+var fmt2=new Intl.NumberFormat("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2});
+function pct(x,d){return (d===0?fmt0:fmt1).format(x*100)+"%";}
+function sgn(x,f){return (x>0?"+":x<0?"−":"")+f(Math.abs(x));}
+function el(id){return document.getElementById(id);}
+function h(tag,attrs,txt){var e=document.createElement(tag);if(attrs)for(var k in attrs){if(k==="style")e.setAttribute("style",attrs[k]);else e.setAttribute(k,attrs[k]);}if(txt!=null)e.textContent=txt;return e;}
+
+/* ---------- Model ---------- */
+function compute(k,sc){
+  var c=D[k]; sc=sc||S;
+  var fixedShare=sc.fixed/100;
+  var gp0=c.rev*c.gm, opex0=gp0-c.ebitda, F=opex0*fixedShare, v=(opex0*(1-fixedShare))/c.rev;
+  var glp0=c.rev*c.glp, non0=c.rev-glp0, mNon=(gp0-glp0*GLP_BRAND)/non0;
+  var conv=sc.glp/100;
+  var glpRev=glp0*(1-conv)+glp0*conv*(1-GLP_PRICE)*GLP_VOL;
+  var glpGP=glp0*(1-conv)*GLP_BRAND+glp0*conv*(1-GLP_PRICE)*GLP_VOL*GLP_GEN;
+  var g=1+sc.sales/100;
+  var levGm=0,levEff=0,levSpread=0;
+  LEVERS.forEach(function(l){if(sc.levers&&sc.levers[l.id]){levGm+=l.gm||0;levEff+=l.eff||0;levSpread+=l.spread||0;}});
+  var R=(non0+glpRev)*g;
+  var GP=(non0*mNon+glpGP)*g+R*(sc.gm+levGm)/10000;
+  var opex=F+v*R-c.rev*(sc.eff+levEff)/10000;
+  var ebitda=GP-opex, ebit=ebitda-c.da;
+  var fin=c.fin-c.nd*((sc.selic-SELIC0)-levSpread)/100;
+  var ebt=ebit+fin, ni=ebt>0?ebt*(1-c.tax):ebt;
+  var net=R*c.netRatio;
+  var cm=GP/R-v;
+  return {R:R,net:net,GP:GP,opex:opex,F:F,vR:v*R,ebitda:ebitda,ebit:ebit,fin:fin,ebt:ebt,ni:ni,cm:cm,
+    tax:ebt>0?ebt*c.tax:0,
+    margin:ni/net,turn:net/c.assets,em:c.assets/c.equity,roe:ni/c.equity,
+    ndE:c.nd/ebitda,cover:ebit/Math.max(1,-fin),
+    ev:c.price*c.shares+c.nd,
+    dol:(R*cm)/ebit, dfl:ebit/ebt,
+    beDrop:ebt/(R*cm), covDrop:Math.max(0,(ebitda-c.nd/3)/(R*cm))
+  };
+}
+function baseScen(){return {sales:0,gm:0,selic:SELIC0,glp:0,eff:0,fixed:S.fixed,levers:{}};}
+
+/* ---------- Panel ---------- */
+var sl=["sales","gm","selic","glp","eff"];
+function showVals(){
+  el("v-sales").textContent=sgn(S.sales,function(x){return fmt0.format(x)})+"%";
+  el("v-gm").textContent=sgn(S.gm,function(x){return fmt0.format(x)})+" bps";
+  el("v-selic").textContent=fmt2.format(S.selic)+"%";
+  el("v-glp").textContent=fmt0.format(S.glp)+"% das vendas";
+  el("v-eff").textContent=fmt0.format(S.eff)+" bps";
+  el("v-fixed").textContent=fmt0.format(S.fixed)+"%";
+}
+sl.forEach(function(k){
+  el("s-"+k).addEventListener("input",function(e){S[k]=parseFloat(e.target.value);markPreset(null);render();});
+});
+el("s-fixed").addEventListener("input",function(e){S.fixed=parseFloat(e.target.value);render();});
+document.querySelectorAll("[data-preset]").forEach(function(b){
+  b.addEventListener("click",function(){var p=PRESETS[b.dataset.preset];Object.assign(S,p);sl.forEach(function(k){el("s-"+k).value=S[k];});markPreset(b.dataset.preset);render();});
+});
+function markPreset(p){document.querySelectorAll("[data-preset]").forEach(function(b){b.setAttribute("aria-pressed",b.dataset.preset===p?"true":"false");});}
+el("toggle").addEventListener("click",function(){var p=el("panel");var c=p.classList.toggle("collapsed");this.textContent=c?"Mostrar controles":"Ocultar controles";this.setAttribute("aria-expanded",String(!c));});
+
+/* ---------- Valuation helpers ---------- */
+function targetMult(k,r){
+  var cur={};IDS.forEach(function(i){var b=compute(i,baseScen());cur[i]={m:b.ev/b.ebitda,roe:b.roe};});
+  if(S.mult==="own")return cur[k].m;
+  if(S.mult==="avg")return (cur.rd.m+cur.pm.m+cur.pv.m)/3;
+  // regression EV/EBITDA ~ a + b*ROE across the three
+  var xs=IDS.map(function(i){return cur[i].roe}),ys=IDS.map(function(i){return cur[i].m});
+  var mx=xs.reduce(function(a,b){return a+b})/3,my=ys.reduce(function(a,b){return a+b})/3;
+  var num=0,den=0;for(var j=0;j<3;j++){num+=(xs[j]-mx)*(ys[j]-my);den+=(xs[j]-mx)*(xs[j]-mx);}
+  var b=num/den,a=my-b*mx; return a+b*r.roe;
+}
+function implied(k){var r=compute(k);var m=targetMult(k,r);var p=(m*r.ebitda-D[k].nd)/D[k].shares;return {r:r,m:m,p:p,up:p/D[k].price-1};}
+
+/* ---------- Verdict strip ---------- */
+function renderVerdict(){
+  var box=el("verdict");box.textContent="";
+  IDS.forEach(function(k){
+    var c=D[k],iv=implied(k),b=compute(k,baseScen());
+    var d=h("div",{class:"vc",style:"--c:var("+c.c+")"});
+    d.appendChild(h("h3",null,c.name));
+    d.appendChild(h("div",{class:"tk"},c.tk+" a R$ "+fmt2.format(c.price)));
+    var big=h("div",{class:"big num "+(iv.up>=0?"up":"down")},"R$ "+fmt2.format(Math.max(0,iv.p)));
+    d.appendChild(big);
+    d.appendChild(h("div",{class:"sub"},"preço justo no cenário, a "+fmt1.format(iv.m)+"x EBITDA"));
+    var cls=Math.abs(iv.up)<0.05?"flat":(iv.up>0?"up":"down");
+    d.appendChild(h("span",{class:"pill "+cls+" num"},sgn(iv.up,function(x){return fmt1.format(x*100)})+"% vs. cotação"));
+    var dn=(iv.r.ni/b.ni-1);
+    d.appendChild(h("div",{class:"sub num",style:"margin-top:8px"},"Lucro "+sgn(dn,function(x){return fmt1.format(x*100)})+"% · ROE "+pct(iv.r.roe)+" · Dív./EBITDA "+fmt1.format(iv.r.ndE)+"x"));
+    box.appendChild(d);
+  });
+  var names={own:"o múltiplo atual de cada empresa",avg:"a média do setor",roe:"o múltiplo justificado pelo ROE"};
+  el("verdict-note").textContent="Preço justo = (múltiplo-alvo × EBITDA do cenário − dívida líquida) ÷ ações. Múltiplo-alvo em uso: "+names[S.mult]+" (troque na seção 5).";
+}
+
+/* ---------- 1. Data table ---------- */
+var FIELDS=[
+  ["rev","Receita bruta 12m",0,false],["gm","Margem bruta (%)",1,false,true],["ebitda","EBITDA ajustado 12m",0,false],
+  ["da","Depreciação e amortização",0,true],["fin","Resultado financeiro 12m",0,true],["tax","Alíquota efetiva IR (%)",1,true,true],
+  ["nd","Dívida líquida",0,false],["equity","Patrimônio líquido",0,true],["assets","Ativo total",0,true],
+  ["shares","Ações (milhões)",0,false],["price","Cotação (R$)",2,false],["glp","GLP-1 nas vendas (%)",1,false,true]
+];
+function renderData(){
+  var t=el("t-data");t.textContent="";
+  var th=h("thead"),tr=h("tr");tr.appendChild(h("th",null,"Item"));
+  IDS.forEach(function(k){var x=h("th");var dot=h("span",{class:"co-dot",style:"--c:var("+D[k].c+")"});x.appendChild(dot);x.appendChild(document.createTextNode(D[k].name));tr.appendChild(x);});
+  th.appendChild(tr);t.appendChild(th);
+  var tb=h("tbody");
+  FIELDS.forEach(function(f){
+    var r=h("tr",f[3]?{class:"est"}:null);r.appendChild(h("td",null,f[1]));
+    IDS.forEach(function(k){
+      var td=h("td"),inp=h("input",{type:"number",step:"any","aria-label":f[1]+" "+D[k].name});
+      inp.value=f[4]?+(D[k][f[0]]*100).toFixed(2):D[k][f[0]];
+      inp.addEventListener("change",function(){var v=parseFloat(inp.value);if(isNaN(v))return;D[k][f[0]]=f[4]?v/100:v;save();render(true);});
+      td.appendChild(inp);r.appendChild(td);
+    });
+    tb.appendChild(r);
+  });
+  var r2=h("tr");r2.appendChild(h("td",null,"Lucro líquido 12m (calculado)"));
+  IDS.forEach(function(k){r2.appendChild(h("td",null,fmt0.format(compute(k,baseScen()).ni)));});
+  tb.appendChild(r2);
+  t.appendChild(tb);
+}
+function save(){try{localStorage.setItem("bula-data",JSON.stringify(D));}catch(e){}}
+el("reset").addEventListener("click",function(){D=JSON.parse(JSON.stringify(BASE));try{localStorage.removeItem("bula-data");}catch(e){}render(true);});
+
+/* ---------- Generic SVG helpers ---------- */
+function svg(w,hh){var s=document.createElementNS("http://www.w3.org/2000/svg","svg");s.setAttribute("viewBox","0 0 "+w+" "+hh);s.setAttribute("width","100%");s.setAttribute("role","img");return s;}
+function sv(tag,a){var e=document.createElementNS("http://www.w3.org/2000/svg",tag);for(var k in a)e.setAttribute(k,a[k]);return e;}
+function tip(container){var t=container.querySelector(".tip");if(!t){t=h("div",{class:"tip"});container.appendChild(t);}return t;}
+function showTip(container,t,txt,evt){t.textContent=txt;var r=container.getBoundingClientRect();var x=evt.clientX-r.left+12,y=evt.clientY-r.top-34;t.style.opacity=1;var tw=t.offsetWidth;if(x+tw>r.width)x=r.width-tw-4;t.style.left=Math.max(0,x)+"px";t.style.top=y+"px";}
+function legend(id){var l=el(id);l.textContent="";IDS.forEach(function(k){var s=h("span");s.appendChild(h("span",{class:"co-dot",style:"--c:var("+D[k].c+")"}));s.appendChild(document.createTextNode(D[k].name));l.appendChild(s);});}
+
+/* ---------- 2. Leverage ---------- */
+function renderLev(){
+  legend("leg1");
+  var box=el("c-lev");box.textContent="";
+  var W=Math.max(320,box.clientWidth||600),H=300,m={l:46,r:14,t:12,b:34};
+  var s=svg(W,H);s.setAttribute("aria-label","Linhas de variação do lucro líquido conforme variação das vendas");
+  var xs=[];for(var x=-20;x<=20;x+=1)xs.push(x);
+  var series={};var ymin=0,ymax=0;
+  IDS.forEach(function(k){
+    var b=compute(k,Object.assign({},S,{sales:0})).ni;
+    series[k]=xs.map(function(x){var r=compute(k,Object.assign({},S,{sales:x}));var y=(r.ni/b-1)*100;if(b<=0)y=0;return y;});
+    series[k].forEach(function(y){ymin=Math.min(ymin,y);ymax=Math.max(ymax,y);});
+  });
+  ymin=Math.max(ymin,-200);ymax=Math.min(ymax,200);
+  var X=function(v){return m.l+(v+20)/40*(W-m.l-m.r)},Y=function(v){return m.t+(ymax-v)/(ymax-ymin)*(H-m.t-m.b)};
+  var step=ymax-ymin>200?50:25;
+  for(var g=Math.ceil(ymin/step)*step;g<=ymax;g+=step){
+    s.appendChild(sv("line",{x1:m.l,x2:W-m.r,y1:Y(g),y2:Y(g),stroke:cssv("--line"),"stroke-width":g===0?1.5:1}));
+    var tx=sv("text",{x:m.l-6,y:Y(g)+4,"text-anchor":"end"});tx.textContent=(g>0?"+":"")+g+"%";s.appendChild(tx);
+  }
+  [-20,-10,0,10,20].forEach(function(v){var tx=sv("text",{x:X(v),y:H-10,"text-anchor":"middle"});tx.textContent=(v>0?"+":"")+v+"% vendas";s.appendChild(tx);});
+  s.appendChild(sv("line",{x1:X(S.sales),x2:X(S.sales),y1:m.t,y2:H-m.b,stroke:cssv("--ink2"),"stroke-dasharray":"4 4"}));
+  IDS.forEach(function(k){
+    var d=xs.map(function(x,i){var y=Math.max(ymin,Math.min(ymax,series[k][i]));return (i?"L":"M")+X(x).toFixed(1)+" "+Y(y).toFixed(1);}).join(" ");
+    s.appendChild(sv("path",{d:d,fill:"none",stroke:cssv(D[k].c),"stroke-width":2.5}));
+  });
+  var hit=sv("rect",{x:m.l,y:m.t,width:W-m.l-m.r,height:H-m.t-m.b,fill:"transparent"});s.appendChild(hit);
+  box.appendChild(s);var t=tip(box);
+  hit.addEventListener("mousemove",function(e){var r=s.getBoundingClientRect();var px=(e.clientX-r.left)*W/r.width;var v=Math.round((px-m.l)/(W-m.l-m.r)*40-20);v=Math.max(-20,Math.min(20,v));var i=v+20;
+    showTip(box,t,"Vendas "+(v>0?"+":"")+v+"%: "+IDS.map(function(k){return D[k].name+" "+sgn(series[k][i],function(x){return fmt0.format(x)})+"%"}).join(" | "),e);});
+  hit.addEventListener("mouseleave",function(){t.style.opacity=0;});
+
+  var R={};IDS.forEach(function(k){R[k]=compute(k);});
+  var kb=el("k-lev");kb.textContent="";
+  IDS.forEach(function(k){
+    var r=R[k],c=D[k],d=h("div",{class:"kpi",style:"border-top:4px solid var("+c.c+")"});
+    d.appendChild(h("div",{class:"h"},c.name));
+    [["GAO estrutural (EBIT)",fmt1.format(r.dol)+"x"],["GAF (lucro ÷ EBIT)",fmt1.format(r.dfl)+"x"],["GAT combinado",fmt1.format(r.dol*r.dfl)+"x"],
+     ["GAO observado 2T26 (EBITDA ÷ vendas)",fmt1.format(c.g26.ebitda/c.g26.rev)+"x"],
+     ["Queda de vendas até o prejuízo",r.beDrop>0?"−"+pct(r.beDrop):"já no prejuízo"],
+     ["Queda até Dív./EBITDA = 3x",r.covDrop>0?"−"+pct(r.covDrop):"já acima"],
+     ["Dívida líquida / EBITDA",fmt1.format(r.ndE)+"x"],["Cobertura de juros (EBIT ÷ juros)",fmt1.format(r.cover)+"x"]
+    ].forEach(function(p){var row=h("div",{class:"row"});row.appendChild(h("span",null,p[0]));row.appendChild(h("b",null,p[1]));d.appendChild(row);});
+    kb.appendChild(d);
+  });
+  var rd=R.rd,pm=R.pm,pv=R.pv;
+  var r=el("r-lev");r.textContent="";
+  r.appendChild(h("h4",null,"Leitura para o comitê"));
+  r.appendChild(h("p",null,"Farmácia tem custo fixo alto (aluguel, farmacêutico obrigatório, folha de loja). Por isso cada 1% de venda vira cerca de "+fmt1.format(rd.dol)+"% de EBIT na RD, "+fmt1.format(pm.dol)+"% na Pague Menos e "+fmt1.format(pv.dol)+"% na Panvel. A Panvel é a mais sensível: ganha mais quando as lojas novas amadurecem, perde mais se o fluxo cair."));
+  r.appendChild(h("p",null,"O risco de dívida é baixo nas três: a RD aguenta uma queda de vendas de "+pct(rd.beDrop)+" antes do prejuízo; Pague Menos e Panvel, cerca de "+pct(pm.beDrop)+" e "+pct(pv.beDrop)+". A Pague Menos é a mais exposta a juros: carrega "+fmt1.format(pm.ndE)+"x EBITDA de dívida líquida e cada 1 p.p. de Selic custa cerca de R$ "+fmt0.format(D.pm.nd/100*(1-D.pm.tax))+" milhões de lucro, "+pct(D.pm.nd/100*(1-D.pm.tax)/Math.max(1,compute("pm",baseScen()).ni))+" do lucro anual."));
+  r.appendChild(h("p",null,"Principais riscos da estrutura de custos: aluguel e folha reajustados pela inflação sem venda equivalente, e GLP-1 de marca, que traz fluxo mas tem margem bruta de cerca de 12%, menos da metade da média da loja."));
+}
+
+/* ---------- 3. DuPont ---------- */
+function renderDup(){
+  var R={};IDS.forEach(function(k){R[k]=compute(k);});
+  var t=el("t-dupont");t.textContent="";
+  var th=h("thead"),tr=h("tr");["","Margem líquida","Giro do ativo","Multiplicador do PL","ROE"].forEach(function(x){tr.appendChild(h("th",null,x));});th.appendChild(tr);t.appendChild(th);
+  var tb=h("tbody");
+  IDS.forEach(function(k){var r=R[k],row=h("tr"),td=h("td");td.appendChild(h("span",{class:"co-dot",style:"--c:var("+D[k].c+")"}));td.appendChild(document.createTextNode(D[k].name));row.appendChild(td);
+    [pct(r.margin),fmt2.format(r.turn)+"x",fmt2.format(r.em)+"x"].forEach(function(v){row.appendChild(h("td",null,v));});
+    row.appendChild(h("td",{style:"font-weight:600"},pct(r.roe)));tb.appendChild(row);});
+  t.appendChild(tb);
+  // log decomposition vs RD
+  var box=el("c-dup");box.textContent="";
+  var W=Math.max(320,box.clientWidth||600),rows=[];
+  ["pm","pv"].forEach(function(k){
+    var a=R[k],b=R.rd,diff=a.roe-b.roe,lnT=Math.log(Math.abs(a.roe/b.roe))||1;
+    var parts=[["Margem",Math.log(Math.abs(a.margin/b.margin))],["Giro",Math.log(a.turn/b.turn)],["Alavancagem",Math.log(a.em/b.em)]];
+    rows.push({k:k,diff:diff,parts:parts.map(function(p){return [p[0],a.roe>0&&b.roe>0?p[1]/Math.log(a.roe/b.roe)*diff:0];})});
+  });
+  var H=rows.length*3*30+50,m={l:150,r:60,t:10,b:24};var s=svg(W,H);s.setAttribute("aria-label","Decomposição da diferença de ROE");
+  var maxA=0;rows.forEach(function(r){r.parts.forEach(function(p){maxA=Math.max(maxA,Math.abs(p[1]));});});maxA=Math.max(maxA,0.02);
+  var X=function(v){return m.l+(v+maxA)/(2*maxA)*(W-m.l-m.r)};
+  s.appendChild(sv("line",{x1:X(0),x2:X(0),y1:m.t,y2:H-m.b,stroke:cssv("--ink2")}));
+  var y=m.t;
+  rows.forEach(function(r){
+    r.parts.forEach(function(p){
+      var tx=sv("text",{x:m.l-8,y:y+17,"text-anchor":"end"});tx.textContent=D[r.k].name+": "+p[0];s.appendChild(tx);
+      var x0=X(Math.min(0,p[1])),w=Math.abs(X(p[1])-X(0));
+      s.appendChild(sv("rect",{x:x0,y:y+4,width:Math.max(1,w),height:18,rx:2,fill:p[1]>=0?cssv("--green"):cssv("--bad")}));
+      var vt=sv("text",{x:p[1]>=0?X(p[1])+5:X(p[1])-5,y:y+17,"text-anchor":p[1]>=0?"start":"end"});vt.textContent=sgn(p[1]*100,function(x){return fmt1.format(x)});s.appendChild(vt);
+      y+=28;
+    });
+    y+=8;
+  });
+  box.appendChild(s);
+  var r=el("r-dup");r.textContent="";
+  r.appendChild(h("h4",null,"Leitura para o comitê"));
+  r.appendChild(h("p",null,"A RD entrega ROE de "+pct(R.rd.roe)+" contra "+pct(R.pm.roe)+" da Pague Menos e "+pct(R.pv.roe)+" da Panvel. A diferença não vem de giro: as três vendem praticamente o mesmo por real de ativo. Vem de duas fontes."));
+  r.appendChild(h("p",null,"Margem: a RD lucra "+pct(R.rd.margin)+" de cada venda líquida, efeito de escala na compra, mix de classes A e B e diluição de despesas administrativas em mais de 3.600 lojas."));
+  r.appendChild(h("p",null,"Alavancagem: o multiplicador do PL da RD ("+fmt2.format(R.rd.em)+"x) é alto, mas não por dívida bancária, que é só "+fmt1.format(R.rd.ndE)+"x o EBITDA. Ele vem de fornecedores e aluguéis: a RD é financiada pela própria cadeia. É uma alavancagem de melhor qualidade que a da Pague Menos, que historicamente usou mais dívida cara."));
+  r.appendChild(h("p",null,"Conclusão: o retorno da RD é explicado por margem e pelo poder de negociação; o da Panvel e da Pague Menos ainda depende do amadurecimento das lojas para expandir margem."));
+}
+
+/* ---------- 4. Costs ---------- */
+function renderCost(){
+  var l=el("leg-cost");l.textContent="";
+  var cats=[["CMV","--ink2"],["Despesas fixas","--rd"],["Despesas variáveis","--pv"],["D&A","--line"],["Juros","--pm"],["IR","--warn"],["Lucro","--green"]];
+  cats.forEach(function(c){var s=h("span");s.appendChild(h("span",{class:"co-dot",style:"--c:var("+c[1]+")"}));s.appendChild(document.createTextNode(c[0]));l.appendChild(s);});
+  var box=el("c-cost");box.textContent="";var W=Math.max(320,box.clientWidth||600),H=150,m={l:96,r:10,t:6};
+  var s=svg(W,H);s.setAttribute("aria-label","Composição de custos por R$ 100 de receita");var t=tip(box);
+  IDS.forEach(function(k,i){
+    var r=compute(k),R=r.R;
+    var vals=[R-r.GP,r.F-(D[k].rev*(S.eff)/10000),r.vR,D[k].da,-r.fin,r.tax,Math.max(0,r.ni)].map(function(v){return Math.max(0,v)/R*100;});
+    var tot=vals.reduce(function(a,b){return a+b});var y=m.t+i*46;
+    var tx=sv("text",{x:m.l-8,y:y+21,"text-anchor":"end"});tx.textContent=D[k].name;s.appendChild(tx);
+    var x=m.l;
+    vals.forEach(function(v,j){var w=v/tot*(W-m.l-m.r);var rc=sv("rect",{x:x,y:y+6,width:Math.max(0,w),height:24,fill:cssv(cats[j][1])});
+      rc.addEventListener("mousemove",function(e){showTip(box,t,D[k].name+" · "+cats[j][0]+": R$ "+fmt1.format(v),e);});rc.addEventListener("mouseleave",function(){t.style.opacity=0;});
+      s.appendChild(rc);x+=w;});
+  });
+  box.appendChild(s);
+
+  var pt=el("t-perf");pt.textContent="";var th=h("thead"),tr=h("tr");["","Receita","EBITDA","Lucro aj.","EBITDA ÷ receita"].forEach(function(x){tr.appendChild(h("th",null,x));});th.appendChild(tr);pt.appendChild(th);
+  var tb=h("tbody");IDS.forEach(function(k){var g=D[k].g26,row=h("tr");row.appendChild(h("td",null,D[k].name));[g.rev,g.ebitda,g.ni].forEach(function(v){row.appendChild(h("td",{class:"up"},"+"+fmt1.format(v)+"%"));});row.appendChild(h("td",null,fmt1.format(g.ebitda/g.rev)+"x"));tb.appendChild(row);});pt.appendChild(tb);
+
+  var lb=el("levers");if(!lb.childElementCount){
+    LEVERS.forEach(function(lv){var lab=h("label",{class:"lever"});var cb=h("input",{type:"checkbox"});cb.addEventListener("change",function(){S.levers[lv.id]=cb.checked;render();});
+      lab.appendChild(cb);var dv=h("div");dv.appendChild(h("b",null,lv.t));dv.appendChild(h("span",null,lv.d));lab.appendChild(dv);
+      var em=h("em",{id:"lv-"+lv.id});lab.appendChild(em);lb.appendChild(lab);});
+  }
+  // impact of each lever on RD/PM/PV net income
+  LEVERS.forEach(function(lv){
+    var tot=0;IDS.forEach(function(k){var a=compute(k,Object.assign({},S,{levers:{}})),o={};o[lv.id]=true;var b=compute(k,Object.assign({},S,{levers:o}));tot+=b.ni-a.ni;});
+    el("lv-"+lv.id).textContent="+R$ "+fmt0.format(tot)+" mi";
+  });
+  var lt=el("t-lever");lt.textContent="";var th2=h("thead"),tr2=h("tr");["Com alavancas marcadas","Lucro","Δ lucro","Valor por ação*"].forEach(function(x){tr2.appendChild(h("th",null,x));});th2.appendChild(tr2);lt.appendChild(th2);
+  var tb2=h("tbody");IDS.forEach(function(k){var a=compute(k,Object.assign({},S,{levers:{}})),b=compute(k);var mult=(compute(k,baseScen()).ev/compute(k,baseScen()).ebitda);
+    var dps=(b.ebitda-a.ebitda)*mult/D[k].shares+((b.fin-a.fin)*(1-D[k].tax))*(D[k].price*D[k].shares/Math.max(1,compute(k,baseScen()).ni))/D[k].shares;
+    var row=h("tr");row.appendChild(h("td",null,D[k].name));row.appendChild(h("td",null,fmt0.format(b.ni)));row.appendChild(h("td",{class:b.ni-a.ni>0?"up":""},sgn(b.ni-a.ni,function(x){return fmt0.format(x)})));row.appendChild(h("td",null,sgn(dps,function(x){return "R$ "+fmt2.format(x)})));tb2.appendChild(row);});
+  lt.appendChild(tb2);
+  var cap=h("caption",{class:"muted",style:"caption-side:bottom;text-align:left;padding-top:6px"},"* Ganho de EBITDA ao múltiplo atual mais economia de juros ao P/L atual, dividido pelo número de ações.");lt.appendChild(cap);
+}
+
+/* ---------- 5. Valuation ---------- */
+el("sel-mult").addEventListener("change",function(e){S.mult=e.target.value;render();});
+function renderEV(){
+  var box=el("c-ev");box.textContent="";var W=Math.max(320,box.clientWidth||600),H=220,m={l:100,r:50,t:10,b:20};
+  var s=svg(W,H);s.setAttribute("aria-label","EV/EBITDA atual e no cenário");
+  var vals=IDS.map(function(k){var b=compute(k,baseScen()),r=compute(k);return {k:k,now:b.ev/b.ebitda,sc:r.ebitda>0?b.ev/r.ebitda:NaN};});
+  var mx=Math.max.apply(null,vals.map(function(v){return Math.max(v.now,isFinite(v.sc)?v.sc:0)}))*1.1;
+  var X=function(v){return m.l+v/mx*(W-m.l-m.r)};
+  vals.forEach(function(v,i){var y=m.t+i*64;
+    var tx=sv("text",{x:m.l-8,y:y+26,"text-anchor":"end"});tx.textContent=D[v.k].name;s.appendChild(tx);
+    s.appendChild(sv("rect",{x:m.l,y:y+10,width:X(v.now)-m.l,height:26,rx:2,fill:cssv(D[v.k].c),opacity:.85}));
+    var t1=sv("text",{x:X(v.now)+6,y:y+28});t1.textContent=fmt1.format(v.now)+"x";s.appendChild(t1);
+    if(isFinite(v.sc)){var cx=X(Math.min(v.sc,mx)),cy=y+48;s.appendChild(sv("path",{d:"M"+cx+" "+(cy-7)+" L"+(cx+7)+" "+cy+" L"+cx+" "+(cy+7)+" L"+(cx-7)+" "+cy+" Z",fill:cssv("--ink")}));
+      var t2=sv("text",{x:cx+11,y:cy+4});t2.textContent=fmt1.format(v.sc)+"x no cenário";s.appendChild(t2);}
+  });
+  box.appendChild(s);
+  var t=el("t-ev");t.textContent="";var th=h("thead"),tr=h("tr");["","EV (R$ mi)","EV/EBITDA","P/L","EV/EBITDA ÷ cresc. EBITDA","Múltiplo-alvo","Preço justo","Potencial"].forEach(function(x){tr.appendChild(h("th",null,x));});th.appendChild(tr);t.appendChild(th);
+  var tb=h("tbody");IDS.forEach(function(k){var b=compute(k,baseScen()),iv=implied(k),row=h("tr");
+    row.appendChild(h("td",null,D[k].name));
+    [fmt0.format(b.ev),fmt1.format(b.ev/b.ebitda)+"x",fmt1.format(D[k].price*D[k].shares/b.ni)+"x",fmt2.format((b.ev/b.ebitda)/D[k].g26.ebitda),fmt1.format(iv.m)+"x","R$ "+fmt2.format(Math.max(0,iv.p))].forEach(function(v){row.appendChild(h("td",null,v));});
+    row.appendChild(h("td",{class:iv.up>=0?"up":"down",style:"font-weight:600"},sgn(iv.up,function(x){return fmt1.format(x*100)})+"%"));tb.appendChild(row);});
+  t.appendChild(tb);
+  var bR={};IDS.forEach(function(k){bR[k]=compute(k,baseScen());});
+  var r=el("r-ev");r.textContent="";r.appendChild(h("h4",null,"Cara ou barata?"));
+  r.appendChild(h("p",null,"A RD negocia a "+fmt1.format(bR.rd.ev/bR.rd.ebitda)+"x EBITDA, quase o dobro da Pague Menos ("+fmt1.format(bR.pm.ev/bR.pm.ebitda)+"x). O prêmio é justificado: ROE de "+pct(bR.rd.roe)+", ganho de participação nacional (19,7%, +1,7 p.p. em um ano), dívida em queda e maior previsibilidade. Em termos absolutos, não está barata."));
+  r.appendChild(h("p",null,"A Pague Menos é a mais barata no múltiplo, mas o desconto reflete ROE de "+pct(bR.pm.roe)+", concentração no Nordeste, crescimento mais lento no 2T26 (+9,3% de receita) e o histórico de dívida pós-Extrafarma."));
+  r.appendChild(h("p",null,"A Panvel é o caso mais interessante: "+fmt1.format(bR.pv.ev/bR.pv.ebitda)+"x EBITDA com o EBITDA crescendo 26%. Pelo múltiplo dividido pelo crescimento, é a mais barata das três ("+fmt2.format((bR.pv.ev/bR.pv.ebitda)/26.4)+" contra "+fmt2.format((bR.rd.ev/bR.rd.ebitda)/17.9)+" da RD). O desconto se explica por liquidez menor e atuação regional no Sul."));
+  r.appendChild(h("p",{class:"muted"},"EV/EBITDA calculado pela equipe com EBITDA ajustado sem IFRS 16, para comparar as três na mesma base. Sites que usam EBITDA com IFRS 16 mostram múltiplos menores."));
+}
+
+/* ---------- 6. Market ---------- */
+var MKT=[
+  ["Lojas (2T26)","3.687","1.695","664"],
+  ["Participação de mercado","19,7% nacional","6,7% nacional","Líder regional no Sul"],
+  ["Vendas digitais / total","31% (R$ 3,9 bi no 2T26)","24,1% (R$ 1,0 bi no 2T26)","33,7% (app = 63% do digital)"],
+  ["Mesmas lojas (2T26)","2º tri seguido de alta","+8,0%","+13,5%"],
+  ["Público principal","Classes A e B, nacional","Classes B2, C e D, Norte e Nordeste","Sul, foco em beleza e marca própria"],
+  ["Expansão","330 a 350 aberturas em 2026","Disciplinada, 8 aberturas no 2T26","Meta de 950 a 1.000 lojas até 2030"]
+];
+var TL=[
+  ["Março 2026","Vence a patente da semaglutida (princípio ativo do Ozempic) no Brasil."],
+  ["1º semestre 2026","Anvisa aprova a Ozivy (EMS) e, depois, o primeiro genérico de semaglutida."],
+  ["2026","RD vende a 4Bio (medicamentos especiais) ao Grupo Profarma por cerca de R$ 600 milhões."],
+  ["Agosto 2026","Resultados do 2T26: preço médio da semaglutida cai 50% na Pague Menos (volume +155%) e 22% na RD (volume +30%)."],
+  ["16 set. 2026","Copom corta a Selic para 13,75%. Próxima reunião em 4 de novembro."]
+];
+var SWOT={
+  rd:{o:["Genérico de GLP-1 com margem de 25% a 30% (vs. 10% a 15% da marca)","Serviços de saúde e digital ampliando a recorrência","Dívida em 0,8x permite acelerar aberturas ou recompras"],
+      a:["Canibalização entre lojas com 3.600+ unidades","Pressão de mix: GLP-1 de marca derruba margem bruta","Prêmio de múltiplo pune qualquer frustração de lucro"]},
+  pm:{o:["Maior sensibilidade a cortes de Selic entre as três","Clientes de cuidado contínuo e recorde de margem EBITDA (6,5%)","Ganho de margem com genéricos em público de menor renda"],
+      a:["Crescimento desacelerando (+9,3% no 2T26)","Concentração no Nordeste e renda mais sensível a ciclo","Dívida ainda 1,8x EBITDA: juros comem boa parte do lucro"]},
+  pv:{o:["Lojas novas amadurecendo: maior GAO do grupo","App como canal dominante, com custo menor que marketplace","Marca própria e beleza elevando margem bruta"],
+      a:["Concorrência da RD ganhando share também no Sul","Baixa liquidez da ação limita fundos grandes","Margem EBITDA (5,4%) ainda abaixo da RD"]}
+};
+function renderMkt(){
+  var t=el("t-mkt");t.textContent="";var th=h("thead"),tr=h("tr");tr.appendChild(h("th",null,""));IDS.forEach(function(k){var x=h("th");x.appendChild(h("span",{class:"co-dot",style:"--c:var("+D[k].c+")"}));x.appendChild(document.createTextNode(D[k].name));tr.appendChild(x);});th.appendChild(tr);t.appendChild(th);
+  var tb=h("tbody");MKT.forEach(function(r){var row=h("tr");r.forEach(function(c){row.appendChild(h("td",{style:"text-align:left;white-space:normal"},c));});tb.appendChild(row);});t.appendChild(tb);
+  var tl=el("tl");if(!tl.childElementCount)TL.forEach(function(x){var li=h("li");li.appendChild(h("time",null,x[0]));li.appendChild(document.createTextNode(x[1]));tl.appendChild(li);});
+  tabs("tab-swot","swot",renderSwot);renderSwot();
+}
+function renderSwot(){var b=el("swot");b.textContent="";var s=SWOT[S.swot];[["Oportunidades",s.o],["Ameaças",s.a]].forEach(function(p){var d=h("div");d.appendChild(h("h5",null,p[0]));var ul=h("ul");p[1].forEach(function(x){ul.appendChild(h("li",null,x));});d.appendChild(ul);b.appendChild(d);});}
+function tabs(id,key,cb){var b=el(id);b.textContent="";IDS.forEach(function(k){var c=h("button",{class:"chip","aria-pressed":String(S[key]===k)},D[k].name);c.addEventListener("click",function(){S[key]=k;tabs(id,key,cb);cb();});b.appendChild(c);});}
+
+/* ---------- 7. Stress heatmap ---------- */
+function renderHeat(){
+  tabs("tab-heat","heat",renderHeat2);renderHeat2();
+}
+function renderHeat2(){
+  var k=S.heat,b=el("heat");b.textContent="";
+  var cols=[-20,-15,-10,-5,0,5,10,15,20],rows=[10,11,12,13.75,15,16,17];
+  b.style.gridTemplateColumns="90px repeat("+cols.length+",minmax(56px,1fr))";
+  var ref=compute(k,baseScen()).ni;
+  b.appendChild(h("div",{class:"hd"},"Selic ↓ / vendas →"));
+  cols.forEach(function(c){b.appendChild(h("div",{class:"hd"},(c>0?"+":"")+c+"%"));});
+  var green=cssv("--green"),bad=cssv("--bad");
+  rows.forEach(function(sr){
+    b.appendChild(h("div",{class:"hd"},fmt2.format(sr)+"%"));
+    cols.forEach(function(c){
+      var r=compute(k,Object.assign({},S,{sales:c,selic:sr}));var d=r.ni/ref-1;
+      var txt=r.ni<0?"prej.":sgn(d,function(x){return fmt0.format(x*100)})+"%";
+      var a=Math.min(1,Math.abs(d)/0.8);var col=d>=0?green:bad;
+      var cell=h("div",{style:"background:color-mix(in srgb,"+col+" "+Math.round(a*85+8)+"%,transparent);color:"+(a>0.55?"#fff":"var(--ink)")},txt);
+      if(Math.abs(c-S.sales)<2.5&&Math.abs(sr-S.selic)<0.5)cell.classList.add("cur");
+      b.appendChild(cell);
+    });
+  });
+}
+
+/* ---------- 8. Thesis ---------- */
+function renderThesis(){
+  var iv={};IDS.forEach(function(k){iv[k]=implied(k);});
+  var order=[["pv","1ª escolha","Crescimento mais barato da bolsa no setor",["EBITDA +26% e lucro +39% no 2T26, com receita acelerando","EV/EBITDA de "+fmt1.format(compute("pv",baseScen()).ev/compute("pv",baseScen()).ebitda)+"x, desconto à RD","Dívida baixa (0,9x) e o maior GAO: amadurecimento de lojas vira lucro","Risco: liquidez da ação e execução da expansão"]],
+    ["rd","Qualidade, comprar em quedas","A melhor empresa, mas já com prêmio",["ROE de "+pct(compute("rd",baseScen()).roe)+" sustentado por margem e escala","Maior beneficiária em volume do GLP-1 genérico (cerca de 35% das vendas nacionais)","Desalavancagem para 0,8x abre espaço para dividendos","Risco: múltiplo alto não perdoa erro de margem"]],
+    ["pm","Aposta tática em juros","Barata, mas depende da Selic",["Cada 1 p.p. de Selic move o lucro de forma relevante","Margem EBITDA recorde e 12 trimestres de desalavancagem","Menor múltiplo do grupo","Risco: crescimento desacelerando e ROE baixo"]]];
+  var b=el("theses");b.textContent="";
+  order.forEach(function(o){var k=o[0],d=h("div",{class:"thesis",style:"--c:var("+D[k].c+")"});
+    d.appendChild(h("div",{class:"rank"},o[1]));d.appendChild(h("h3",null,D[k].name+" ("+D[k].tk+")"));d.appendChild(h("div",{class:"muted"},o[2]));
+    var p=h("p",{class:"num",style:"margin:10px 0 0;font-weight:600"},"No cenário atual: R$ "+fmt2.format(Math.max(0,iv[k].p))+" por ação ("+sgn(iv[k].up,function(x){return fmt1.format(x*100)})+"%)");
+    p.className+=" "+(iv[k].up>=0?"up":"down");d.appendChild(p);
+    var ul=h("ul");o[3].forEach(function(x){ul.appendChild(h("li",null,x));});d.appendChild(ul);b.appendChild(d);});
+  var best=IDS.slice().sort(function(a,c){return iv[c].up-iv[a].up;})[0];
+  var r=el("r-final");r.textContent="";r.appendChild(h("h4",null,"Conclusão no cenário selecionado"));
+  r.appendChild(h("p",null,"Com vendas "+sgn(S.sales,function(x){return fmt0.format(x)})+"%, Selic de "+fmt2.format(S.selic)+"% e "+fmt0.format(S.glp)+"% do GLP-1 migrando para genérico, "+(iv[best].up>=0?"o maior potencial está em ":"a menor perda está em ")+D[best].name+" ("+sgn(iv[best].up,function(x){return fmt1.format(x*100)})+"%). Nossa tese de longo prazo prefere Panvel pelo binômio crescimento e preço, mantém RD como posição de qualidade e trata Pague Menos como uma aposta na queda de juros."));
+  r.appendChild(h("p",null,"O que mudaria a tese: margem bruta caindo mais de 100 bps por guerra de preços no GLP-1 (teste o cenário pronto), Selic voltando acima de 15%, ou a Panvel perdendo ritmo nas vendas mesmas lojas."));
+}
+
+/* ---------- Render ---------- */
+var raf=null;
+function render(full){
+  showVals();
+  if(full)renderData();
+  renderVerdict();renderLev();renderDup();renderCost();renderEV();renderHeat();renderThesis();
+  var c=el("t-data");if(c&&c.querySelector("tbody")){var last=c.querySelector("tbody tr:last-child");if(last){var tds=last.querySelectorAll("td");IDS.forEach(function(k,i){if(tds[i+1])tds[i+1].textContent=fmt0.format(compute(k,baseScen()).ni);});}}
+}
+renderData();renderMkt();render(false);
+var rt;window.addEventListener("resize",function(){clearTimeout(rt);rt=setTimeout(function(){render(false);},150);});
+if(window.matchMedia)window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change",function(){render(false);});
+})();
+</script>
+
+<script>
+(function(){
+  if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){});});}
+  var btn=document.getElementById("install"),deferred=null;
+  window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();deferred=e;btn.classList.add("show");});
+  btn.addEventListener("click",function(){if(!deferred)return;deferred.prompt();deferred.userChoice.finally(function(){deferred=null;btn.classList.remove("show");});});
+  var standalone=(window.matchMedia&&window.matchMedia("(display-mode: standalone)").matches)||window.navigator.standalone;
+  if(/iphone|ipad|ipod/i.test(navigator.userAgent)&&!standalone)document.getElementById("ios-hint").classList.add("show");
+  var links=[].slice.call(document.querySelectorAll(".appnav a"));
+  if("IntersectionObserver" in window){
+    var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){links.forEach(function(a){a.classList.toggle("on",a.getAttribute("href")==="#"+e.target.id);});}});},{rootMargin:"-45% 0px -50% 0px"});
+    links.forEach(function(a){var t=document.querySelector(a.getAttribute("href"));if(t)io.observe(t);});
+  }
+})();
+</script>
+</body>
+</html>
